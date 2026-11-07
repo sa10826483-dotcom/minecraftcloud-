@@ -418,6 +418,18 @@ function createBot() {
         }
       }, 3000);
 
+      // Auto-respawn on death (Prevents 'Timed out' death screen kick)
+      bot.on('death', () => {
+        console.log('[Bot] Bot was slain! Auto-respawning immediately in 1s...');
+        setTimeout(() => {
+          try {
+            if (bot) bot.respawn();
+          } catch (e) {
+            console.log('[Bot] Respawn error:', e.message);
+          }
+        }, 1000);
+      });
+
       // Attempt creative mode (only works if bot has OP)
       setTimeout(() => {
         if (bot && botState.connected) {
