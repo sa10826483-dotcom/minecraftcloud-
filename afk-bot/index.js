@@ -4,7 +4,8 @@ const https = require('https');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const SERVER_HOST = process.env.SERVER_HOST || 'sahil9354.aternos.me';
+// Use Aternos direct Dyn IP to completely bypass Cloudflare proxy
+const SERVER_HOST = process.env.SERVER_HOST || 'lungfish.aternos.host';
 const SERVER_PORT = parseInt(process.env.SERVER_PORT || '58762', 10);
 const BOT_NAME = process.env.BOT_NAME || 'Sahil_24_7_Bot';
 
@@ -56,7 +57,7 @@ function connectBot() {
     reconnectTimer = null;
   }
 
-  log(`[Cloud Bot] Opening direct Minecraft protocol socket to ${SERVER_HOST}:${SERVER_PORT} as ${BOT_NAME}...`);
+  log(`[Cloud Bot] Connecting via Dyn IP to ${SERVER_HOST}:${SERVER_PORT} as ${BOT_NAME}...`);
 
   try {
     currentClient = mc.createClient({
@@ -75,7 +76,7 @@ function connectBot() {
   }
 
   currentClient.on('connect', () => {
-    log(`[Cloud Bot] TCP Handshake succeeded to Aternos port ${SERVER_PORT}!`);
+    log(`[Cloud Bot] TCP Handshake succeeded to Dyn IP port ${SERVER_PORT}!`);
     botStatus.lastEvent = 'TCP_CONNECTED';
   });
 
