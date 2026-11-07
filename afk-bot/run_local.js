@@ -56,6 +56,18 @@ function connect() {
     }, 25000);
   });
 
+  // AUTO-RESPAWN ON DEATH (Fixes death screen disconnect loop)
+  bot.on('death', () => {
+    console.log('[Cloud 24/7 Bot] Bot died in game! Auto-respawning immediately...');
+    setTimeout(() => {
+      try {
+        if (bot) bot.respawn();
+      } catch (e) {
+        console.error('[Cloud 24/7 Bot] Respawn error:', e.message);
+      }
+    }, 1000);
+  });
+
   bot.on('kicked', (reason) => {
     console.log('[Cloud 24/7 Bot] Kicked reason:', JSON.stringify(reason));
     if (afkInterval) clearInterval(afkInterval);
