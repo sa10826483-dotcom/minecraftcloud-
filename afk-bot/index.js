@@ -4,8 +4,8 @@ const https = require('https');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-// Use Aternos direct Dyn IP to completely bypass Cloudflare proxy
-const SERVER_HOST = process.env.SERVER_HOST || 'lungfish.aternos.host';
+// Direct unfiltered Aternos Dyn IP
+const SERVER_HOST = process.env.SERVER_HOST || 'loosejaw.aternos.host';
 const SERVER_PORT = parseInt(process.env.SERVER_PORT || '58762', 10);
 const BOT_NAME = process.env.BOT_NAME || 'Sahil_24_7_Bot';
 
@@ -64,7 +64,7 @@ function connectBot() {
       host: SERVER_HOST,
       port: SERVER_PORT,
       username: BOT_NAME,
-      version: '1.21.1',
+      version: false, // auto-detect with ViaVersion support
       skipValidation: true,
       checkTimeoutInterval: 45 * 1000,
     });
@@ -86,7 +86,7 @@ function connectBot() {
     botStatus.reconnectAttempts = 0;
     botStatus.lastError = null;
     botStatus.lastEvent = 'LOGIN_SUCCESS';
-    log(`[Cloud Bot] >>> LOGGED IN SUCCESSFULLY AS ${BOT_NAME} (UUID: ${packet.uuid})! SERVER IS 24/7 ONLINE! <<<`);
+    log(`[Cloud Bot] >>> LOGGED IN SUCCESSFULLY AS ${BOT_NAME}! SERVER IS 24/7 ONLINE! <<<`);
   });
 
   currentClient.on('login', () => {
@@ -135,7 +135,7 @@ setInterval(() => {
 // Status & diagnostics endpoint
 app.get('/', (req, res) => {
   res.json({
-    service: 'Minecraft 24/7 Cloud AFK Bot (Pure Protocol Edition)',
+    service: 'Minecraft 24/7 Cloud AFK Bot (PaperMC DynIP Edition)',
     status: botStatus.connected ? 'ONLINE_IN_SERVER' : 'CONNECTING',
     targetServer: `${SERVER_HOST}:${SERVER_PORT}`,
     details: botStatus,
