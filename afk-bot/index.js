@@ -3,8 +3,8 @@ const express = require('express');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const SERVER_HOST = process.env.SERVER_HOST || 'sahilsmp.aternos.me';
-const SERVER_PORT = parseInt(process.env.SERVER_PORT || '25565', 10);
+const SERVER_HOST = process.env.SERVER_HOST || 'sahil9354.aternos.me';
+const SERVER_PORT = parseInt(process.env.SERVER_PORT || '58762', 10);
 const BOT_NAME = process.env.BOT_NAME || 'CloudAFK_24_7';
 
 let botStatus = {
