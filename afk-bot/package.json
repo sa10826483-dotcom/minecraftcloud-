@@ -4,6 +4,7 @@
   "description": "Robust 24/7 AFK Bot for Aternos Minecraft Servers",
   "main": "index.js",
   "scripts": {
+    "build": "echo 'Build complete'",
     "start": "node index.js"
   },
   "dependencies": {

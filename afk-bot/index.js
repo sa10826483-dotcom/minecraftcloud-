@@ -430,23 +430,21 @@ function createBot() {
         }, 1000);
       });
 
-      // Attempt creative mode (only works if bot has OP)
+      // Attempt spectator or creative mode so mobs and zombies never attack bot
       setTimeout(() => {
         if (bot && botState.connected) {
-          bot.chat('/gamemode creative');
-          console.log('[INFO] Attempted to set creative mode (requires OP)');
+          bot.chat('/gamemode spectator');
+          console.log('[INFO] Attempted /gamemode spectator (requires OP in Aternos)');
         }
       }, 3000);
 
       bot.on('messagestr', (message) => {
         if (
           message.includes('commands.gamemode.success.self') ||
-          message.includes('Set own game mode to Creative Mode')
+          message.includes('Spectator Mode') ||
+          message.includes('Creative Mode')
         ) {
-          console.log('[INFO] Bot is now in Creative Mode.');
-           
-          bot.chat('/gamerule sendCommandFeedback false');
-          
+          console.log('[INFO] Bot game mode successfully set to godmode!');
         }
       });
     });
