@@ -1,8 +1,6 @@
 name: 24/7 Minecraft Cloud AFK Bot
 
 on:
-  push:
-    branches: [ main ]
   schedule:
     - cron: '0 */5 * * *'
   workflow_dispatch:
