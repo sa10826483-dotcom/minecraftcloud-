@@ -1,11 +1,16 @@
 const mineflayer = require('mineflayer');
 const express = require('express');
+const https = require('https');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const SERVER_HOST = process.env.SERVER_HOST || 'sahil9354.aternos.me';
 const SERVER_PORT = parseInt(process.env.SERVER_PORT || '58762', 10);
 const BOT_NAME = process.env.BOT_NAME || 'CloudAFK_24_7';
+
+let currentBot = null;
+let reconnectTimer = null;
+let afkTimer = null;
 
 let botStatus = {
   connected: false,
@@ -14,72 +19,132 @@ let botStatus = {
   host: SERVER_HOST,
   port: SERVER_PORT,
   botName: BOT_NAME,
+  lastAction: null,
 };
 
+function scheduleReconnect() {
+  if (reconnectTimer) return;
+  botStatus.connected = false;
+  botStatus.reconnectAttempts++;
+
+  if (afkTimer) {
+    clearInterval(afkTimer);
+    afkTimer = null;
+  }
+
+  if (currentBot) {
+    try {
+      currentBot.removeAllListeners();
+      currentBot.end();
+    } catch {}
+    currentBot = null;
+  }
+
+  console.log(`[Cloud Bot] Disconnected. Reconnecting in 5 seconds (Attempt #${botStatus.reconnectAttempts})...`);
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    createBot();
+  }, 5000);
+}
+
 function createBot() {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+
   console.log(`[Cloud Bot] Connecting to ${SERVER_HOST}:${SERVER_PORT} as ${BOT_NAME}...`);
 
-  const bot = mineflayer.createBot({
-    host: SERVER_HOST,
-    port: SERVER_PORT,
-    username: BOT_NAME,
-    version: false, // auto-detect server version
-    checkTimeoutInterval: 60 * 1000,
-  });
+  try {
+    currentBot = mineflayer.createBot({
+      host: SERVER_HOST,
+      port: SERVER_PORT,
+      username: BOT_NAME,
+      version: false, // auto-detect protocol version
+      checkTimeoutInterval: 45 * 1000,
+    });
+  } catch (err) {
+    console.error('[Cloud Bot] Initialization error:', err.message);
+    scheduleReconnect();
+    return;
+  }
 
-  bot.on('login', () => {
+  currentBot.on('login', () => {
     botStatus.connected = true;
     botStatus.lastConnectedAt = new Date().toISOString();
     botStatus.reconnectAttempts = 0;
-    console.log(`[Cloud Bot] Successfully logged into ${SERVER_HOST}! Server is now KEPT ALIVE 24/7.`);
+    console.log(`[Cloud Bot] Logged in successfully to ${SERVER_HOST}! Server will stay alive 24/7.`);
   });
 
-  bot.on('spawn', () => {
-    console.log('[Cloud Bot] Bot spawned in the world. Initializing Anti-AFK routine.');
+  currentBot.on('spawn', () => {
+    console.log('[Cloud Bot] Spawned in the world. Activating Anti-AFK physics engine.');
 
-    // Anti-AFK Routine: swing arm and look around every 30 seconds
-    const afkInterval = setInterval(() => {
-      if (!bot || !botStatus.connected) {
-        clearInterval(afkInterval);
-        return;
-      }
+    if (afkTimer) clearInterval(afkTimer);
+
+    // Active movement every 20 seconds to completely bypass Aternos and Paper AFK kick
+    afkTimer = setInterval(() => {
+      if (!currentBot || !botStatus.connected) return;
+
       try {
-        bot.swingArm('right');
+        // 1. Swing arm
+        currentBot.swingArm('right');
+
+        // 2. Physical Jump
+        currentBot.setControlState('jump', true);
+        setTimeout(() => {
+          if (currentBot) currentBot.setControlState('jump', false);
+        }, 350);
+
+        // 3. Sneak toggle
+        currentBot.setControlState('sneak', true);
+        setTimeout(() => {
+          if (currentBot) currentBot.setControlState('sneak', false);
+        }, 700);
+
+        // 4. Look around
         const yaw = Math.random() * Math.PI * 2;
-        const pitch = (Math.random() - 0.5) * 0.5;
-        bot.look(yaw, pitch, true);
+        const pitch = (Math.random() - 0.5) * 0.4;
+        currentBot.look(yaw, pitch, true);
+
+        botStatus.lastAction = new Date().toISOString();
       } catch (err) {
-        console.warn('[Cloud Bot] Anti-AFK action skipped:', err.message);
+        console.warn('[Cloud Bot] Movement error:', err.message);
       }
-    }, 30000);
+    }, 20000);
   });
 
-  bot.on('kicked', (reason) => {
-    botStatus.connected = false;
-    console.log(`[Cloud Bot] Kicked from server. Reason:`, reason);
+  currentBot.on('kicked', (reason) => {
+    console.warn(`[Cloud Bot] Kicked from server. Reason:`, reason);
+    scheduleReconnect();
   });
 
-  bot.on('error', (err) => {
-    botStatus.connected = false;
-    console.log(`[Cloud Bot] Error encountered:`, err.message);
+  currentBot.on('error', (err) => {
+    console.error(`[Cloud Bot] Socket error:`, err.message);
+    scheduleReconnect();
   });
 
-  bot.on('end', () => {
-    botStatus.connected = false;
-    botStatus.reconnectAttempts++;
-    console.log(`[Cloud Bot] Disconnected. Reconnecting in 10 seconds (Attempt #${botStatus.reconnectAttempts})...`);
-    setTimeout(createBot, 10000);
+  currentBot.on('end', () => {
+    console.log(`[Cloud Bot] Socket closed.`);
+    scheduleReconnect();
   });
 }
 
-// Start bot
+// Start initial connection
 createBot();
 
-// Cloud Health Check Endpoint for 24/7 Hosting (Render, Koyeb, UptimeRobot)
+// Self-ping to prevent Render free instance from sleeping
+setInterval(() => {
+  const url = 'https://aternos-24-7-bot-gfrf.onrender.com';
+  https.get(url, (res) => {
+    // Keep alive ping
+  }).on('error', () => {});
+}, 4 * 60 * 1000); // every 4 minutes
+
+// Express status endpoint
 app.get('/', (req, res) => {
   res.json({
     service: 'Minecraft 24/7 Cloud AFK Bot',
-    status: botStatus.connected ? 'ONLINE_IN_SERVER' : 'CONNECTING',
+    status: botStatus.connected ? 'ONLINE_IN_SERVER' : 'RECONNECTING',
     targetServer: `${SERVER_HOST}:${SERVER_PORT}`,
     details: botStatus,
     timestamp: new Date().toISOString(),
@@ -87,5 +152,5 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`[Cloud Bot HTTP] Keep-alive endpoint listening on port ${PORT}`);
+  console.log(`[Cloud Bot HTTP] Service active on port ${PORT}`);
 });
