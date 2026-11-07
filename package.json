@@ -9,8 +9,9 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace=apps/web",
+    "postinstall": "prisma generate --schema=packages/database/prisma/schema.prisma",
     "build": "npm run build:packages && npm run build --workspace=apps/web",
-    "build:packages": "tsc -p packages/minecraft/tsconfig.json && tsc -p packages/database/tsconfig.json && tsc -p packages/auth/tsconfig.json && tsc -p packages/api/tsconfig.json && tsc -p packages/ui/tsconfig.json && tsc -p infrastructure/agent/tsconfig.json",
+    "build:packages": "prisma generate --schema=packages/database/prisma/schema.prisma && tsc -p packages/minecraft/tsconfig.json && tsc -p packages/database/tsconfig.json && tsc -p packages/auth/tsconfig.json && tsc -p packages/api/tsconfig.json && tsc -p packages/ui/tsconfig.json && tsc -p infrastructure/agent/tsconfig.json",
     "start": "npm run start --workspace=apps/web",
     "prisma:generate": "prisma generate --schema=packages/database/prisma/schema.prisma",
     "prisma:push": "prisma db push --schema=packages/database/prisma/schema.prisma",
