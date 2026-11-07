@@ -1,9 +1,11 @@
 name: 24/7 Minecraft Cloud AFK Bot
 
 on:
+  push:
+    branches: [ main ]
   schedule:
     - cron: '0 */5 * * *' # Auto-restart every 5 hours for continuous 24/7 uptime
-  workflow_dispatch: # Allows 1-click manual start from GitHub Actions tab
+  workflow_dispatch:
 
 jobs:
   run-bot:
@@ -17,11 +19,12 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Bot Dependencies
+      - name: Install Dependencies
         run: |
           cd afk-bot
           npm install
 
-      - name: Run 24/7 AFK Bot
+      - name: Run 24/7 Cloud AFK Bot
         run: |
-          node afk-bot/run_local.js
+          cd afk-bot
+          node run_local.js
