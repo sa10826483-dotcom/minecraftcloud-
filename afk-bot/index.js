@@ -1,6 +1,8 @@
 const mineflayer = require('mineflayer');
 const express = require('express');
 const https = require('https');
+const net = require('net');
+const dns = require('dns');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -65,14 +67,14 @@ function startBot() {
     reconnectTimer = null;
   }
 
-  log(`[Cloud Bot] Connecting directly to ${SERVER_HOST}:${SERVER_PORT} as ${BOT_NAME} (Version 26.1 - Zero Ping Mode)...`);
+  log(`[Cloud Bot] Connecting directly to ${SERVER_HOST}:${SERVER_PORT} as ${BOT_NAME}...`);
 
   try {
     currentBot = mineflayer.createBot({
       host: SERVER_HOST,
       port: SERVER_PORT,
       username: BOT_NAME,
-      version: '26.1', // Explicit version skips SLP ping to bypass Aternos cloud DDoS filter
+      version: '26.1',
       checkTimeoutInterval: 60 * 1000,
     });
   } catch (err) {
@@ -101,7 +103,6 @@ function startBot() {
 
     if (afkInterval) clearInterval(afkInterval);
 
-    // Safe Anti-AFK: gentle look around and arm swing every 20s (no illegal movement kicks)
     afkInterval = setInterval(() => {
       if (!currentBot || !botStatus.connected) return;
       try {
@@ -136,12 +137,12 @@ function startBot() {
 // Start cloud bot
 startBot();
 
-// Self-ping to prevent Render free instance from idling
+// Self-ping to prevent Render sleep
 setInterval(() => {
   https.get('https://aternos-24-7-bot-gfrf.onrender.com', () => {}).on('error', () => {});
 }, 3 * 60 * 1000);
 
-// Status HTTP Endpoint for web dashboard / live diagnostics
+// Status HTTP Endpoint
 app.get('/', (req, res) => {
   res.json({
     service: 'Minecraft 24/7 Cloud AFK Bot',
@@ -150,6 +151,30 @@ app.get('/', (req, res) => {
     details: botStatus,
     recentLogs,
     timestamp: new Date().toISOString(),
+  });
+});
+
+// Diagnostic endpoint: test direct DNS & TCP socket to Aternos
+app.get('/diag', (req, res) => {
+  dns.lookup(SERVER_HOST, (dnsErr, address) => {
+    if (dnsErr) {
+      return res.json({ host: SERVER_HOST, dnsError: dnsErr.message });
+    }
+    const sock = new net.Socket();
+    sock.setTimeout(4000);
+    sock.on('connect', () => {
+      sock.destroy();
+      res.json({ host: SERVER_HOST, resolvedIp: address, port: SERVER_PORT, tcpSuccess: true });
+    });
+    sock.on('timeout', () => {
+      sock.destroy();
+      res.json({ host: SERVER_HOST, resolvedIp: address, port: SERVER_PORT, tcpSuccess: false, error: 'TIMEOUT (Aternos blocked Render IP)' });
+    });
+    sock.on('error', (err) => {
+      sock.destroy();
+      res.json({ host: SERVER_HOST, resolvedIp: address, port: SERVER_PORT, tcpSuccess: false, error: err.message });
+    });
+    sock.connect(SERVER_PORT, address);
   });
 });
 
