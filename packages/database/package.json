@@ -1,0 +1,19 @@
+{
+  "name": "@minecraftcloud/database",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "generate": "prisma generate",
+    "push": "prisma db push",
+    "seed": "node dist/seed.js",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.21.1"
+  },
+  "devDependencies": {
+    "prisma": "^5.21.1",
+    "typescript": "^5.5.0"
+  }
+}

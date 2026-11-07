@@ -1,0 +1,346 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MODERATOR
+  VIEWER
+}
+
+enum ServerEdition {
+  JAVA
+  BEDROCK
+  CROSSPLAY
+}
+
+enum ServerSoftware {
+  PAPER
+  PURPUR
+  VANILLA
+  FABRIC
+  FORGE
+  BEDROCK
+}
+
+enum ServerState {
+  ONLINE
+  OFFLINE
+  STARTING
+  STOPPING
+  CRASHED
+  PROVISIONING
+}
+
+enum PlayerEdition {
+  JAVA
+  BEDROCK
+}
+
+enum BackupType {
+  FULL
+  WORLD_ONLY
+  CONFIG_ONLY
+}
+
+enum BackupState {
+  PENDING
+  CREATING
+  COMPLETED
+  FAILED
+}
+
+enum ScheduleAction {
+  RESTART
+  BACKUP
+  COMMAND
+  STOP
+  START
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  username      String         @unique
+  passwordHash  String
+  globalRole    Role           @default(VIEWER)
+  avatarUrl     String?
+  emailVerified Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  memberships   ServerMember[]
+  sessions      Session[]
+  auditLogs     AuditLog[]
+
+  @@index([email])
+  @@index([username])
+}
+
+model Session {
+  id           String    @id @default(uuid())
+  token        String    @unique
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt    DateTime
+  userAgent    String?
+  ipAddress    String?
+  createdAt    DateTime  @default(now())
+
+  @@index([token])
+  @@index([userId])
+}
+
+model Server {
+  id               String               @id @default(uuid())
+  name             String
+  description      String?
+  edition          ServerEdition        @default(CROSSPLAY)
+  version          String               @default("1.21.1")
+  software         ServerSoftware       @default(PURPUR)
+  status           ServerState          @default(OFFLINE)
+
+  javaPort         Int                  @default(25565)
+  bedrockPort      Int                  @default(19132)
+  host             String               @default("play.minecraftcloud.net")
+  containerId      String?
+  
+  memoryLimitMb    Int                  @default(4096)
+  cpuLimitCores    Float                @default(2.0)
+  diskLimitMb      Int                  @default(20480)
+  maxPlayers       Int                  @default(20)
+
+  autoRestart      Boolean              @default(true)
+  maxCrashRetries  Int                  @default(3)
+  crashCount       Int                  @default(0)
+  lastCrashReason  String?
+  lastStartedAt    DateTime?
+  lastStoppedAt    DateTime?
+
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  members          ServerMember[]
+  config           ServerConfig?
+  resource         ServerResource?
+  statusHistory    ServerStatusRecord[]
+  players          Player[]
+  backups          Backup[]
+  plugins          Plugin[]
+  mods             Mod[]
+  schedules        Schedule[]
+  auditLogs        AuditLog[]
+  files            FileRecord[]
+
+  @@index([status])
+  @@index([edition])
+  @@index([software])
+}
+
+model ServerMember {
+  id        String   @id @default(uuid())
+  serverId  String
+  userId    String
+  role      Role     @default(OWNER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, userId])
+  @@index([userId])
+  @@index([serverId])
+}
+
+model ServerConfig {
+  id                 String   @id @default(uuid())
+  serverId           String   @unique
+  server             Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  motd               String   @default("§aMinecraftCloud §7- Java & Bedrock Cross-Play Server")
+  difficulty         String   @default("normal")
+  gameMode           String   @default("survival")
+  onlineMode         Boolean  @default(true)
+  pvp                Boolean  @default(true)
+  allowFlight        Boolean  @default(false)
+  whiteListEnabled   Boolean  @default(false)
+  viewDistance       Int      @default(10)
+  simulationDistance Int      @default(8)
+  spawnProtection    Int      @default(16)
+  
+  enableRcon         Boolean  @default(true)
+  rconPort           Int      @default(25575)
+  rconPassword       String   @default("mc-cloud-secure-rcon")
+
+  enableGeyser       Boolean  @default(true)
+  enableFloodgate    Boolean  @default(true)
+  geyserBedrockPort  Int      @default(19132)
+  geyserAddress      String   @default("0.0.0.0")
+
+  customProperties   String?  @default("{}")
+  updatedAt          DateTime @updatedAt
+}
+
+model ServerResource {
+  id               String   @id @default(uuid())
+  serverId         String   @unique
+  server           Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  cpuUsagePercent  Float    @default(0.0)
+  memoryUsageMb    Float    @default(0.0)
+  memoryMaxMb      Float    @default(4096.0)
+  diskUsageMb      Float    @default(0.0)
+  diskMaxMb        Float    @default(20480.0)
+  networkRxMb      Float    @default(0.0)
+  networkTxMb      Float    @default(0.0)
+  tps              Float    @default(20.0)
+  onlinePlayers    Int      @default(0)
+  uptimeSeconds    Int      @default(0)
+
+  updatedAt        DateTime @updatedAt
+}
+
+model ServerStatusRecord {
+  id           String      @id @default(uuid())
+  serverId     String
+  server       Server      @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  status       ServerState
+  cpuPercent   Float
+  memoryMb     Float
+  diskMb       Float
+  tps          Float
+  playerCount  Int
+  recordedAt   DateTime    @default(now())
+
+  @@index([serverId, recordedAt])
+}
+
+model Player {
+  id            String        @id @default(uuid())
+  serverId      String
+  server        Server        @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  username      String
+  uuid          String
+  edition       PlayerEdition @default(JAVA)
+  isOnline      Boolean       @default(false)
+  isOp          Boolean       @default(false)
+  isWhitelisted Boolean       @default(false)
+  isBanned      Boolean       @default(false)
+  banReason     String?
+  firstJoined   DateTime      @default(now())
+  lastSeen      DateTime      @default(now())
+  ipAddress     String?
+
+  @@unique([serverId, uuid])
+  @@index([serverId, username])
+  @@index([serverId, isOnline])
+}
+
+model Backup {
+  id          String      @id @default(uuid())
+  serverId    String
+  server      Server      @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  name        String
+  type        BackupType  @default(FULL)
+  sizeBytes   BigInt      @default(0)
+  filePath    String
+  checksum    String?
+  status      BackupState @default(PENDING)
+  createdAt   DateTime    @default(now())
+
+  @@index([serverId, createdAt])
+}
+
+model Plugin {
+  id          String   @id @default(uuid())
+  serverId    String
+  server      Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  name        String
+  version     String
+  fileName    String
+  source      String   @default("HANGAR")
+  isEnabled   Boolean  @default(true)
+  description String?
+  author      String?
+  installedAt DateTime @default(now())
+
+  @@unique([serverId, fileName])
+  @@index([serverId])
+}
+
+model Mod {
+  id          String   @id @default(uuid())
+  serverId    String
+  server      Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  name        String
+  version     String
+  fileName    String
+  loader      String   @default("FABRIC")
+  isEnabled   Boolean  @default(true)
+  description String?
+  installedAt DateTime @default(now())
+
+  @@unique([serverId, fileName])
+  @@index([serverId])
+}
+
+model FileRecord {
+  id          String   @id @default(uuid())
+  serverId    String
+  server      Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  path        String
+  name        String
+  isDirectory Boolean  @default(false)
+  sizeBytes   BigInt   @default(0)
+  mimeType    String?
+  updatedAt   DateTime @default(now())
+
+  @@unique([serverId, path])
+  @@index([serverId, path])
+}
+
+model Schedule {
+  id             String         @id @default(uuid())
+  serverId       String
+  server         Server         @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  name           String
+  cronExpression String
+  action         ScheduleAction @default(RESTART)
+  commandPayload String?
+  isEnabled      Boolean        @default(true)
+  lastRunAt      DateTime?
+  nextRunAt      DateTime?
+  createdAt      DateTime       @default(now())
+
+  @@index([serverId, isEnabled])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  serverId   String?
+  server     Server?  @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  action     String
+  details    String?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([serverId, createdAt])
+  @@index([userId, createdAt])
+}

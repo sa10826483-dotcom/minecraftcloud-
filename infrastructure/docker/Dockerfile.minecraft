@@ -1,0 +1,33 @@
+FROM eclipse-temurin:21-jre-alpine
+
+LABEL maintainer="MinecraftCloud Infrastructure Team"
+LABEL description="Production Minecraft Java & Bedrock Cross-Play Server Image"
+
+RUN apk add --no-cache curl bash jq tar fontconfig tzdata
+
+# Create non-root minecraft user
+RUN addgroup -g 1000 minecraft && \
+    adduser -u 1000 -G minecraft -h /data -s /bin/bash -D minecraft
+
+WORKDIR /data
+
+# Download tools
+ENV MEMORY=4096M \
+    SERVER_PORT=25565 \
+    BEDROCK_PORT=19132 \
+    RCON_PORT=25575 \
+    RCON_PASSWORD=mc-cloud-secure-rcon \
+    EULA=TRUE \
+    TYPE=PURPUR \
+    VERSION=1.21.1
+
+EXPOSE 25565/tcp
+EXPOSE 19132/udp
+EXPOSE 25575/tcp
+
+COPY infrastructure/docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+USER minecraft
+
+ENTRYPOINT ["/entrypoint.sh"]

@@ -1,0 +1,30 @@
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+COPY package*.json ./
+COPY infrastructure/agent/package*.json ./infrastructure/agent/
+COPY packages/minecraft/package*.json ./packages/minecraft/
+
+RUN npm install --workspace=infrastructure/agent --workspace=packages/minecraft
+
+COPY packages/minecraft/ ./packages/minecraft/
+COPY infrastructure/agent/ ./infrastructure/agent/
+
+WORKDIR /app/infrastructure/agent
+RUN npm run build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+RUN apk add --no-cache docker-cli tar curl
+
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages/minecraft/dist ./packages/minecraft/dist
+COPY --from=builder /app/infrastructure/agent/dist ./infrastructure/agent/dist
+COPY --from=builder /app/infrastructure/agent/node_modules ./infrastructure/agent/node_modules
+
+WORKDIR /app/infrastructure/agent
+EXPOSE 8443
+
+CMD ["node", "dist/server.js"]

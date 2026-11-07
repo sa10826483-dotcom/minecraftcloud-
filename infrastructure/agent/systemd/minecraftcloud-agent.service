@@ -1,0 +1,22 @@
+[Unit]
+Description=MinecraftCloud Node Agent & Container Orchestrator
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/minecraftcloud/agent
+Environment=NODE_ENV=production
+Environment=AGENT_PORT=8443
+Environment=AGENT_SECRET=change-this-to-a-secure-random-token
+Environment=DATA_DIR=/data/servers
+Environment=BACKUPS_DIR=/data/backups
+Environment=PUBLIC_HOST=play.minecraftcloud.net
+ExecStart=/usr/bin/node dist/server.js
+Restart=always
+RestartSec=5s
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

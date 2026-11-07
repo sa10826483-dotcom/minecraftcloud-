@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # -------------------------------------------------------------
+  # Persistent PostgreSQL Database
+  # -------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: mc-cloud-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mccloud}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mc_cloud_secure_pg_pass_2026}
+      POSTGRES_DB: ${POSTGRES_DB:-minecraftcloud}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mccloud}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # -------------------------------------------------------------
+  # MinecraftCloud Persistent Node Agent & Orchestrator
+  # Communicates with local Docker Engine to manage game containers
+  # -------------------------------------------------------------
+  agent:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile.agent
+    container_name: mc-cloud-agent
+    restart: always
+    privileged: true
+    environment:
+      AGENT_PORT: 8443
+      AGENT_SECRET: ${AGENT_SECRET:-minecraftcloud-super-secret-node-key-2026}
+      DATA_DIR: /data/servers
+      BACKUPS_DIR: /data/backups
+      DOCKER_SOCKET: /var/run/docker.sock
+      PUBLIC_HOST: ${PUBLIC_HOST:-play.minecraftcloud.net}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - mc_servers_data:/data/servers
+      - mc_backups_data:/data/backups
+    ports:
+      - "8443:8443"
+    depends_on:
+      - postgres
+
+  # -------------------------------------------------------------
+  # Nginx Reverse Proxy with SSL Termination and Security Headers
+  # -------------------------------------------------------------
+  nginx:
+    image: nginx:alpine
+    container_name: mc-cloud-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      - agent
+
+  # -------------------------------------------------------------
+  # Prometheus Telemetry Collector (Optional Monitoring)
+  # -------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v2.53.1
+    container_name: mc-cloud-prometheus
+    restart: unless-stopped
+    volumes:
+      - ../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+
+volumes:
+  postgres_data:
+    driver: local
+  mc_servers_data:
+    driver: local
+  mc_backups_data:
+    driver: local
+  prometheus_data:
+    driver: local

@@ -1,0 +1,24 @@
+{
+  "name": "minecraftcloud-root",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/web",
+    "packages/*",
+    "infrastructure/agent"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/web",
+    "build": "npm run build:packages && npm run build --workspace=apps/web",
+    "build:packages": "tsc -p packages/minecraft/tsconfig.json && tsc -p packages/database/tsconfig.json && tsc -p packages/auth/tsconfig.json && tsc -p packages/api/tsconfig.json && tsc -p packages/ui/tsconfig.json && tsc -p infrastructure/agent/tsconfig.json",
+    "start": "npm run start --workspace=apps/web",
+    "prisma:generate": "prisma generate --schema=packages/database/prisma/schema.prisma",
+    "prisma:push": "prisma db push --schema=packages/database/prisma/schema.prisma",
+    "prisma:seed": "node packages/database/dist/seed.js",
+    "agent:start": "node infrastructure/agent/dist/server.js",
+    "agent:dev": "ts-node infrastructure/agent/src/server.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

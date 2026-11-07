@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js Build Output
+.next/
+out/
+build/
+dist/
+
+# Minecraft Server Worlds, Jars & Backups (Heavy binary files)
+data/servers/
+data/server-jars/
+data/backups/
+*.jar
+*.log
+logs/
+
+# Environment Variables & Secrets
+.env
+.env*.local
+.env.local
+.env.production
+
+# IDE & OS Files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.pem
