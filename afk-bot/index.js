@@ -28,6 +28,7 @@ let botStatus = {
   host: SERVER_HOST,
   port: SERVER_PORT,
   botName: BOT_NAME,
+  version: '26.1',
   lastKickReason: null,
   lastError: null,
 };
@@ -64,13 +65,14 @@ function startBot() {
     reconnectTimer = null;
   }
 
-  log(`[Cloud Bot] Connecting to Minecraft server ${SERVER_HOST}:${SERVER_PORT} as ${BOT_NAME}...`);
+  log(`[Cloud Bot] Connecting directly to ${SERVER_HOST}:${SERVER_PORT} as ${BOT_NAME} (Version 26.1 - Zero Ping Mode)...`);
 
   try {
     currentBot = mineflayer.createBot({
       host: SERVER_HOST,
       port: SERVER_PORT,
       username: BOT_NAME,
+      version: '26.1', // Explicit version skips SLP ping to bypass Aternos cloud DDoS filter
       checkTimeoutInterval: 60 * 1000,
     });
   } catch (err) {
@@ -99,7 +101,7 @@ function startBot() {
 
     if (afkInterval) clearInterval(afkInterval);
 
-    // Safe Anti-AFK: gentle look around and arm swing every 20s
+    // Safe Anti-AFK: gentle look around and arm swing every 20s (no illegal movement kicks)
     afkInterval = setInterval(() => {
       if (!currentBot || !botStatus.connected) return;
       try {
@@ -134,12 +136,12 @@ function startBot() {
 // Start cloud bot
 startBot();
 
-// Self-ping to prevent Render free instance sleep
+// Self-ping to prevent Render free instance from idling
 setInterval(() => {
   https.get('https://aternos-24-7-bot-gfrf.onrender.com', () => {}).on('error', () => {});
 }, 3 * 60 * 1000);
 
-// Status HTTP Endpoint for web dashboard / diagnostics
+// Status HTTP Endpoint for web dashboard / live diagnostics
 app.get('/', (req, res) => {
   res.json({
     service: 'Minecraft 24/7 Cloud AFK Bot',
