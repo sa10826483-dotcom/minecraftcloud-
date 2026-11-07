@@ -1,15 +1,15 @@
 {
-  "name": "minecraft-24-7-cloud-bot",
-  "version": "1.0.0",
-  "description": "24/7 Cloud AFK Bot to keep Aternos server alive forever with zero PC usage",
+  "name": "minecraft-afk-bot",
+  "version": "2.2",
+  "description": "Robust 24/7 AFK Bot for Aternos Minecraft Servers",
   "main": "index.js",
   "scripts": {
-    "build": "echo 'Bot ready'",
     "start": "node index.js"
   },
   "dependencies": {
     "express": "^4.22.3",
     "minecraft-protocol": "^1.47.0",
-    "mineflayer": "^4.20.1"
+    "mineflayer": "^4.20.1",
+    "mineflayer-pathfinder": "^2.4.5"
   }
 }
