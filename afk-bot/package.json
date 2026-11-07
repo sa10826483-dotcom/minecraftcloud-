@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "express": "^4.19.2",
+    "minecraft-protocol": "^1.47.0",
     "mineflayer": "^4.20.1"
   }
 }
