@@ -4,6 +4,7 @@
   "description": "24/7 Cloud AFK Bot to keep Aternos server alive forever with zero PC usage",
   "main": "index.js",
   "scripts": {
+    "build": "echo 'Bot ready'",
     "start": "node index.js"
   },
   "dependencies": {
